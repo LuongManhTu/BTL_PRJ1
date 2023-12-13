@@ -98,13 +98,25 @@ def remove_edge():
                 G.remove_edge(int(node1), int(node2))
                 create_graph()
         remove_edge_text.delete("1.0", tk.END)
-
+        
 
 # Tạo Graph
 def create_graph():
+    
+    if input_text.get("1.0", "end") != " ":
+        data = input_text.get("1.0", "end")
+        lines = data.strip().split("\n")
+        num_v, num_e = map(int, lines[0].split())
+        for v in range(1, num_v + 1):
+            G.add_node(v)
+        for line in lines[1:]:
+            u, v = map(int, line.split("-"))
+            G.add_edge(u, v)
+        global pos
+        pos = nx.spring_layout(G)
 
     # Create a new figure
-    print(list(G.nodes))
+    print(list(G.edges))
 
     plt.clf()
     fig = plt.figure()
@@ -181,41 +193,7 @@ def DFS():
 # BFS
 def BFS():
 
-    if not (G.nodes):
-        print("No node")
-
-    global pos
-
-    _, ax = plt.subplots()
-    # Perform BFS traversal
-    bfs_queue = deque([list(G.nodes)[0]])
-    visited = set()
-
-    while bfs_queue:
-        current_node = bfs_queue.popleft()
-        visited.add(current_node)
-
-        # Set node color for the current node
-        node_colors = ['yellow' if node == current_node else 'gray' if node not in visited else 'lightgreen'
-                       for node in G.nodes]
-
-        # Set edge color for the visited edges
-        edge_colors = ['black' if edge in nx.bfs_edges(
-            G, source=list(G.nodes)[0]) else 'gray' for edge in G.edges]
-
-        # Draw the updated graph
-        nx.draw(G, pos, with_labels=True, node_color=node_colors,
-                node_size=500, edge_color=edge_colors, ax=ax)
-
-        create_graph.canvas.draw()
-        root.update()
-
-        # Update canvas for animation
-        plt.pause(1)
-
-        # Enqueue neighbors of the current node for the next iteration
-        bfs_queue.extend(neighbor for neighbor in G.neighbors(
-            current_node) if neighbor not in visited)
+    print("BFS")
 
 
 ####################     GUI     #######################
