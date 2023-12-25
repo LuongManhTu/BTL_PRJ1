@@ -70,8 +70,8 @@ def create_graph(graph_input, alg_type):
                     node_size=500, edge_color=edge_colors, ax=create_graph.fig.axes[0])  # Use the ax attribute directly
 
             canvas.draw()
-            #root.update()
-
+            root.update()
+            
             # Update canvas for animation
             plt.pause(1)
 
@@ -116,8 +116,6 @@ def create_graph(graph_input, alg_type):
     elif alg_type == 'dfs':
         anim = FuncAnimation(create_graph.fig, update_dfs_algorithm, interval=1000,
                             cache_frame_data=False)
-
-    
 
     # Start the animation
     anim._start()
@@ -172,16 +170,16 @@ graph_entry.insert(tk.END, "1-2, 1-3, 2-4, 2-5, 3-6, 3-7, 4-8, 4-9")
 
 graph_entry.pack(pady=5)
 
-create_graph_button = tk.Button(
-    button_frame, text="Create Graph", command=create_graph)
-create_graph_button.pack(pady=10)
+#create_graph_button = tk.Button(
+#    button_frame, text="Create Graph", command=create_graph)
+#create_graph_button.pack(pady=10)
 
 run_DFS_button = tk.Button(
-    button_frame, text="Run DFS", command=lambda: create_graph(graph_entry.get("1.0", "end"), 'bfs'))
+    button_frame, text="Run DFS", command=lambda: create_graph(graph_entry.get("1.0", "end"), 'dfs'))
 run_DFS_button.pack(pady=10)
 
 run_BFS_button = tk.Button(
-    button_frame, text="Run BFS", command=lambda: create_graph(graph_entry.get("1.0", "end"), 'dfs'))
+    button_frame, text="Run BFS", command=lambda: create_graph(graph_entry.get("1.0", "end"), 'bfs'))
 run_BFS_button.pack(pady=10)
 
 # Entry box for graph input
