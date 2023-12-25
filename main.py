@@ -1,3 +1,4 @@
+#need to improve effective
 import random
 import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -10,14 +11,19 @@ from collections import deque
 matplotlib.use('Agg')
 
 def create_graph(graph_input, alg_type):
-    # Destroy the previous canvas and figure if they exist (prevent duplicate canvas)
+    #global canvas  # Declare canvas as a global variable
+    # Destroy the previous canvas and figure if they exist
     if hasattr(create_graph, 'canvas'):
         create_graph.canvas.get_tk_widget().destroy()
         plt.close(create_graph.fig)
 
     # Parse the entered graph input to create a directed graph
     edges = [tuple(map(int, edge.strip().split('-'))) for edge in graph_input.split(',')]
-    G = nx.DiGraph()
+    if graph_type_var.get() != 'Graph':
+        G = nx.DiGraph()
+    else:
+        G = nx.Graph()
+    print('###debug' + graph_type_var.get())
     G.add_edges_from(edges)
 
     # Create a new figure
@@ -28,20 +34,21 @@ def create_graph(graph_input, alg_type):
     nx.draw(G, pos, with_labels=True, node_color='skyblue',
             node_size=500, edge_color='gray', ax=ax)
 
+    frame = tk.Frame(root)
+    frame.grid(row=0, column=0, sticky=tk.NSEW)
+
     # Create a Tkinter canvas
-    create_graph.canvas = FigureCanvasTkAgg(create_graph.fig, master=root)
-    create_graph.canvas.draw()
-    create_graph.canvas.get_tk_widget().pack()
+    canvas = FigureCanvasTkAgg(create_graph.fig, master=frame)
+    canvas.draw()
+    canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-    # Add a navigation toolbar if it doesn't exist
-    if not hasattr(create_graph, 'toolbar'):
-        create_graph.toolbar = NavigationToolbar2Tk(create_graph.canvas, root)
-        create_graph.toolbar.update()
-        create_graph.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
+    # Add a navigation toolbar
+    toolbar = NavigationToolbar2Tk(canvas, frame)
+    toolbar.update()
+    toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
     # Function to update node and edge colors based on BFS algorithmic steps
     def update_bfs_algorithm(frame):
-        nonlocal G, pos
+        nonlocal G, pos  # Add canvas to nonlocal variables
 
         # Perform BFS traversal
         bfs_queue = deque([list(G.nodes)[0]])
@@ -53,23 +60,24 @@ def create_graph(graph_input, alg_type):
 
             # Set node color for the current node
             node_colors = ['yellow' if node == current_node else 'gray' if node not in visited else 'lightgreen'
-                           for node in G.nodes]
+                        for node in G.nodes]
 
             # Set edge color for the visited edges
             edge_colors = ['black' if edge in nx.bfs_edges(G, source=list(G.nodes)[0]) else 'gray' for edge in G.edges]
 
             # Draw the updated graph
             nx.draw(G, pos, with_labels=True, node_color=node_colors,
-                    node_size=500, edge_color=edge_colors, ax=ax)
+                    node_size=500, edge_color=edge_colors, ax=create_graph.fig.axes[0])  # Use the ax attribute directly
 
-            create_graph.canvas.draw()
-            root.update()
+            canvas.draw()
+            #root.update()
 
             # Update canvas for animation
             plt.pause(1)
 
             # Enqueue neighbors of the current node for the next iteration
             bfs_queue.extend(neighbor for neighbor in G.neighbors(current_node) if neighbor not in visited)
+
     def update_dfs_algorithm(frame):
         nonlocal G, pos
 
@@ -92,7 +100,7 @@ def create_graph(graph_input, alg_type):
             nx.draw(G, pos, with_labels=True, node_color=node_colors,
                     node_size=500, edge_color=edge_colors, ax=ax)
 
-            create_graph.canvas.draw()
+            canvas.draw()
             root.update()
 
             # Update canvas for animation
@@ -116,23 +124,70 @@ def create_graph(graph_input, alg_type):
 
 # Create the main Tkinter window
 root = tk.Tk()
-root.title("BFS Algorithm Visualization")
+root.title("Graph Visualization")
+root.geometry("1000x700")
 
-# Set the size of the root window
-root.geometry("800x600")
+# Create a button frame on the right side
+button_frame = tk.Frame(root)
+button_frame.grid(row=0, column=1, padx=50, sticky=tk.NSEW)
+
+# Configure grid weights to make the graph expandable
+root.grid_rowconfigure(0, weight=1)
+root.grid_columnconfigure(0, weight=1)
+
+button_frame.columnconfigure(0, weight=1)
+button_frame.columnconfigure(1, weight=1)
+
+# Create a new frame within button_frame
+columns_frame = tk.Frame(button_frame)
+columns_frame.pack()
+
+# Create frames for the two columns
+column1_frame = tk.Frame(columns_frame)
+column1_frame.grid(row=0, column=0, padx=10, pady=10, sticky=tk.NSEW)
+
+column2_frame = tk.Frame(columns_frame)
+column2_frame.grid(row=0, column=1, padx=10, pady=10, sticky=tk.NSEW)
+
+# Widgets for column 1
+
+graph_type_var = tk.StringVar(value="Graph")
+
+graph_type_radio1 = tk.Radiobutton(
+    column1_frame, text="Undirected", variable=graph_type_var, value="Graph")
+graph_type_radio1.pack(pady=5)
+
+
+
+# Widgets for column 2
+graph_type_radio2 = tk.Radiobutton(
+    column2_frame, text="Directed", variable=graph_type_var, value="DiGraph")
+graph_type_radio2.pack(pady=5)
+
+
+
+# Ô nhập đồ thị
+graph_entry = tk.Text(button_frame, height=15, width=20)
+graph_entry.insert(tk.END, "1-2, 1-3, 2-4, 2-5, 3-6, 3-7, 4-8, 4-9")
+
+graph_entry.pack(pady=5)
+
+create_graph_button = tk.Button(
+    button_frame, text="Create Graph", command=create_graph)
+create_graph_button.pack(pady=10)
+
+run_DFS_button = tk.Button(
+    button_frame, text="Run DFS", command=lambda: create_graph(graph_entry.get("1.0", "end"), 'bfs'))
+run_DFS_button.pack(pady=10)
+
+run_BFS_button = tk.Button(
+    button_frame, text="Run BFS", command=lambda: create_graph(graph_entry.get("1.0", "end"), 'dfs'))
+run_BFS_button.pack(pady=10)
 
 # Entry box for graph input
-graph_entry = tk.Entry(root, width=50)
-graph_entry.insert(0, "1-2, 1-3, 2-4, 2-5, 3-6, 3-7, 4-8, 4-9")
-graph_entry.pack()
 
 # Create a button to visualize BFS algorithm
-visualize_bfs_algorithm_button = tk.Button(
-    root, text="Visualize BFS Algorithm", command=lambda: create_graph(graph_entry.get(), 'bfs'))
-visualize_bfs_algorithm_button.pack()
 
-visualize_dfs_algorithm_button = tk.Button(
-    root, text="Visualize DFS Algorithm", command=lambda: create_graph(graph_entry.get(), 'dfs'))
-visualize_dfs_algorithm_button.pack()
+
 # Start the Tkinter event loop
 root.mainloop()
