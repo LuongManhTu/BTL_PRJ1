@@ -10,13 +10,15 @@ from collections import deque
 matplotlib.use('Agg')
 
 def create_graph(graph_input, alg_type):
-    # Destroy the previous canvas and figure if they exist
+    # Parse the entered graph input to create a directed graph
+    edges = [tuple(map(int, edge.strip().split('-'))) for edge in graph_input.split(',')]
+    # only update figure if it doesnt exit or graph_type_var change
+
+    ######## __????????
     if hasattr(create_graph, 'canvas'):
         create_graph.canvas.get_tk_widget().destroy()
         plt.close(create_graph.fig)
 
-    # Parse the entered graph input to create a directed graph
-    edges = [tuple(map(int, edge.strip().split('-'))) for edge in graph_input.split(',')]
     if graph_type_var.get() != 'Graph':
         G = nx.DiGraph()
     else:
@@ -48,7 +50,7 @@ def create_graph(graph_input, alg_type):
 
 
     # Perform BFS traversal
-    def update_bfs_algorithm():
+    def update_bfs_algorithm(frame):
         current_node = bfs_queue.popleft()
         visited.add(current_node)
 
@@ -66,7 +68,7 @@ def create_graph(graph_input, alg_type):
         # Enqueue neighbors of the current node for the next iteration
         bfs_queue.extend(neighbor for neighbor in G.neighbors(current_node) if neighbor not in visited)
 
-    def update_dfs_algorithm():
+    def update_dfs_algorithm(frame):
         current_node = dfs_stack.pop()
         visited.add(current_node)
         # Set node color for the current node
