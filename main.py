@@ -1,5 +1,7 @@
 import random
 import tkinter as tk
+from tkinter import messagebox
+from tkinter import filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
@@ -9,200 +11,765 @@ from collections import deque
 matplotlib.use('Agg')
 
 
-# Create a graph
 G = nx.Graph()
-pos = nx.spring_layout(G)
+pos = None # Store nodes' positions
+undirected = 1 # graph type: undirected
+running = 0 # running == 1 -> a BFS or DFS animation is running -> no interuption
+anim = None
+windowSize = "1280x750"
 
 
 ####################     FUNCTIONS     #######################
 
 
-# Vô hướng, có hướng
+# Switch to undirected graph
 def undigraph():
+    global undirected
+    undirected = 1
+
     global G
-    G = nx.Graph(G)
-    create_graph()
+    DG = nx.Graph()
+    DG.add_nodes_from(G.nodes)
+    DG.add_edges_from(G.edges)
+    G = DG
+
+    output_text.delete('1.0', tk.END)
+
+    # Clear plot
+    plt.clf()
+    fig = plt.figure()
+    # Draw the graph
+    nx.draw(G, pos, with_labels=True, node_color='skyblue',
+            node_size=500, edge_color='lightgray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1, connectionstyle="arc3, rad=0.1")
+    # Create a Tkinter frame as a container for the canvas and toolbar
+    frame = tk.Frame(root)
+    frame.grid(row=0, column=0, sticky=tk.NSEW)
+    # Create a Tkinter canvas
+    canvas = FigureCanvasTkAgg(fig, master=frame)
+    canvas.draw()
+    canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+    # Add a navigation toolbar
+    toolbar = NavigationToolbar2Tk(canvas, frame)
+    toolbar.update()
+    toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
 
 
+# Switch to directed graph
 def digraph():
-    global G
-    G = nx.DiGraph(G)
-    create_graph()
+    global undirected
+    undirected = 0
 
-# Xử lý add_vertex
+    global G
+    DG = nx.DiGraph()
+    DG.add_nodes_from(G.nodes)
+    # get list edges from input_text
+    content = input_text.get("1.0", "end-1c")
+    lines = content.split("\n")
+    lines = lines[1:]
+    edges = [tuple(map(int, line.strip().split())) for line in lines]
+    DG.add_edges_from(edges)
+    G = DG
+
+    output_text.delete('1.0', tk.END)
+
+    plt.clf()
+    fig = plt.figure()
+    # Draw the graph
+    nx.draw(G, pos, with_labels=True, node_color='skyblue',
+            node_size=500, edge_color='lightgray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1, connectionstyle="arc3, rad=0.1")
+    # Create a Tkinter frame as a container for the canvas and toolbar
+    frame = tk.Frame(root)
+    frame.grid(row=0, column=0, sticky=tk.NSEW)
+    # Create a Tkinter canvas
+    canvas = FigureCanvasTkAgg(fig, master=frame)
+    canvas.draw()
+    canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+    # Add a navigation toolbar
+    toolbar = NavigationToolbar2Tk(canvas, frame)
+    toolbar.update()
+    toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
+
+
+# Update num_vertext, num_edge in input_text
+def replace_first_line():
+    content = input_text.get("1.0", "end-1c")
+    lines = content.split("\n")
+    lines[0] = str(len(G.nodes)) + " " + str(len(G.edges))
+    new_content = "\n".join(lines)
+    input_text.delete("1.0", tk.END)
+    input_text.insert(tk.END, new_content)
 
 
 def add_vertex():
     v = add_vertex_text.get("1.0", tk.END).strip()
     if v != "":
+        output_text.delete('1.0', tk.END)
         global pos
+        # First node of G
         if len(G.nodes) == 0:
             new_node = int(v)
+            pos = nx.spring_layout(G)
+            # Asign position (0, 0) to new_node
             pos[new_node] = (0, 0)
             G.add_node(new_node)
         else:
             new_node = int(v)
-            G.add_node(new_node)
-            if len(G.nodes) > 1:
-                fixed_nodes = list(G.nodes())[:-1]
-                fixed_positions = [pos[node] for node in fixed_nodes]
-                new_node_pos = nx.spring_layout(
-                    G, pos=dict(zip(fixed_nodes, fixed_positions)), fixed=fixed_nodes, k=10**-10)
-                pos.update(new_node_pos)
+            if not G.has_node(new_node):
+                G.add_node(new_node)
+                if len(G.nodes) > 1:
+                    fixed_nodes = list(G.nodes())[:-1]
+                    fixed_positions = [pos[node] for node in fixed_nodes]
+                    new_node_pos = nx.spring_layout(
+                        G, pos=dict(zip(fixed_nodes, fixed_positions)), fixed=fixed_nodes, k=10**-10)
+                    pos.update(new_node_pos)
+            else:
+                messagebox.showinfo("Alert", "Vertex existed!")
+
         add_vertex_text.delete("1.0", tk.END)
-        create_graph()
+        replace_first_line()
+
+        # if input_text is not blank, only update the figure; else create a new graph
+        if input_text.get("1.0", "end").strip() != '':
+            plt.clf()
+            fig = plt.figure()
+            # Draw the graph
+            nx.draw(G, pos, with_labels=True, node_color='skyblue',
+                    node_size=500, edge_color='lightgray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1, connectionstyle="arc3, rad=0.1")
+            # Create a Tkinter frame as a container for the canvas and toolbar
+            frame = tk.Frame(root)
+            frame.grid(row=0, column=0, sticky=tk.NSEW)
+            # Create a Tkinter canvas
+            canvas = FigureCanvasTkAgg(fig, master=frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            # Add a navigation toolbar
+            toolbar = NavigationToolbar2Tk(canvas, frame)
+            toolbar.update()
+            toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
+        else:
+            create_graph()
 
 
-# Xử lý del_vertex
 def remove_vertex():
     v = remove_vertex_text.get("1.0", tk.END).strip()
     if v != "":
+        output_text.delete('1.0', tk.END)
         global pos
         node = int(v)
         if G.has_node(node):
             G.remove_node(node)
-            if node in pos:
-                del pos[node]
-            create_graph()
-        remove_vertex_text.delete("1.0", tk.END)
+            # Delete lines in input_text containing this node
+            lines_to_delete = []
+            line_number = 1
+            current_line = input_text.get(
+                f"{line_number}.0", f"{line_number}.end")
+            while current_line:
+                if line_number != 1 and str(node) in current_line:
+                    lines_to_delete.append(line_number)
+                line_number += 1
+                current_line = input_text.get(
+                    f"{line_number}.0", f"{line_number}.end")
+            for line_num in reversed(lines_to_delete):
+                input_text.delete(f"{line_num}.0", f"{line_num+1}.0")
+
+            replace_first_line()
+
+            plt.clf()
+            fig = plt.figure()
+            # Draw the graph
+            nx.draw(G, pos, with_labels=True, node_color='skyblue',
+                    node_size=500, edge_color='lightgray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1, connectionstyle="arc3, rad=0.1")
+            # Create a Tkinter frame as a container for the canvas and toolbar
+            frame = tk.Frame(root)
+            frame.grid(row=0, column=0, sticky=tk.NSEW)
+            # Create a Tkinter canvas
+            canvas = FigureCanvasTkAgg(fig, master=frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            # Add a navigation toolbar
+            toolbar = NavigationToolbar2Tk(canvas, frame)
+            toolbar.update()
+            toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
+        else:
+            messagebox.showinfo("Alert", "Vertex does not exist!")
+    remove_vertex_text.delete("1.0", tk.END)
 
 
-# Xử lý add_edge
 def add_edge():
     edge = add_edge_text.get("1.0", tk.END).strip()
     if edge:
-        nodes = edge.split("-")
+        output_text.delete('1.0', tk.END)
+        nodes = edge.split(" ")
         if len(nodes) == 2:
             node1, node2 = nodes
-            G.add_edge(int(node1), int(node2))
-            global pos
-            fixed_nodes = list(G.nodes())[:-1]
-            fixed_positions = [pos.get(node, (0, 0)) for node in fixed_nodes]
-            fixed_pos = dict(zip(fixed_nodes, fixed_positions))
-            pos.update(fixed_pos)
-            new_node_pos = nx.spring_layout(
-                G, pos=pos, fixed=fixed_nodes, k=10**0)
-            pos.update(new_node_pos)
-            create_graph()
-        add_edge_text.delete("1.0", tk.END)
+            if not G.has_edge(int(node1), int(node2)):
+                global pos
+                if len(G.nodes) == 0:
+                    pos = nx.spring_layout(G)
+                    pos[int(node1)] = (0, 0)
+                G.add_edge(int(node1), int(node2))
+                # Keep the nodes' positions
+                fixed_nodes = list(G.nodes())[:-1]
+                fixed_positions = [pos.get(node, (0, 0))
+                                   for node in fixed_nodes]
+                fixed_pos = dict(zip(fixed_nodes, fixed_positions))
+                pos.update(fixed_pos)
+
+                if int(node1) not in pos:
+                    rand1 = random.choice([-2, -1, 1, 2])
+                    rand2 = random.choice([-2, -1, 1, 2])
+                    # Asign random position for node1 if not existed
+                    pos[int(node1)] = (fixed_positions[-1]
+                                       [0] + rand1, fixed_positions[-1][1] + rand2)
+                if int(node2) not in pos:
+                    rand1 = random.choice([-2, -1, 1, 2])
+                    rand2 = random.choice([-2, -1, 1, 2])
+                    # Asign random position for node2 if not existed
+                    pos[int(node2)] = (fixed_positions[-1]
+                                       [0] + rand1, fixed_positions[-1][1] + rand2)
+
+                # Add new line to input_text
+                new_line = f"\n{node1} {node2}"
+                lines = input_text.get("1.0", "end-1c")
+                if new_line not in lines:
+                    input_text.insert(tk.END, new_line)
+
+                add_edge_text.delete("1.0", tk.END)
+                replace_first_line()
+
+                plt.clf()
+                fig = plt.figure()
+                # Draw the graph
+                nx.draw(G, pos, with_labels=True, node_color='skyblue',
+                        node_size=500, edge_color='lightgray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1, connectionstyle="arc3, rad=0.1")
+                # Create a Tkinter frame as a container for the canvas and toolbar
+                frame = tk.Frame(root)
+                frame.grid(row=0, column=0, sticky=tk.NSEW)
+                # Create a Tkinter canvas
+                canvas = FigureCanvasTkAgg(fig, master=frame)
+                canvas.draw()
+                canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+                # Add a navigation toolbar
+                toolbar = NavigationToolbar2Tk(canvas, frame)
+                toolbar.update()
+                toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
+            else:
+                messagebox.showinfo("Alert", "Edge existed!")
+        else:
+            messagebox.showinfo("Alert", "Wront input format!")
+    add_edge_text.delete("1.0", tk.END)
 
 
-# Xử lý del_edge
 def remove_edge():
     edge = remove_edge_text.get("1.0", tk.END).strip()
     if edge:
-        nodes = edge.split("-")
+        output_text.delete('1.0', tk.END)
+        nodes = edge.strip().split(" ")
+        print(len(nodes))
         if len(nodes) == 2:
             node1, node2 = nodes
             if G.has_edge(int(node1), int(node2)):
                 G.remove_edge(int(node1), int(node2))
-                create_graph()
-        remove_edge_text.delete("1.0", tk.END)
-        
+                # Delete line in input_text containing this edge
+                lines_to_delete = []
+                line_number = 1
+                current_line = input_text.get(
+                    f"{line_number}.0", f"{line_number}.end")
+                while current_line:
+                    if edge in current_line:
+                        lines_to_delete.append(line_number)
+                    line_number += 1
+                    current_line = input_text.get(
+                        f"{line_number}.0", f"{line_number}.end")
+                for line_num in reversed(lines_to_delete):
+                    input_text.delete(f"{line_num}.0", f"{line_num+1}.0")
 
-# Tạo Graph
+                replace_first_line()
+
+                plt.clf()
+                fig = plt.figure()
+                # Draw the graph
+                nx.draw(G, pos, with_labels=True, node_color='skyblue',
+                        node_size=500, edge_color='lightgray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1, connectionstyle="arc3, rad=0.1")
+                # Create a Tkinter frame as a container for the canvas and toolbar
+                frame = tk.Frame(root)
+                frame.grid(row=0, column=0, sticky=tk.NSEW)
+                # Create a Tkinter canvas
+                canvas = FigureCanvasTkAgg(fig, master=frame)
+                canvas.draw()
+                canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+                # Add a navigation toolbar
+                toolbar = NavigationToolbar2Tk(canvas, frame)
+                toolbar.update()
+                toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
+            else:
+                messagebox.showinfo("Alert", "Edge does not exist!")
+        else:
+            messagebox.showinfo("Alert", "Wrong input format!")
+        remove_edge_text.delete("1.0", tk.END)
+
+
+# Import graph from .txt file
+def import_graph():
+    file_path = filedialog.askopenfilename()
+    if file_path:
+        with open(file_path, 'r') as file:
+            content = file.read()
+        input_text.delete('1.0', tk.END)
+        input_text.insert(tk.END, content)
+
+
 def create_graph():
-    
-    if input_text.get("1.0", "end") != " ":
+    global G
+    output_text.delete('1.0', tk.END)
+    # If input_text is not blank, read and create graph from it
+    if input_text.get("1.0", "end").strip() != '':
+        if undirected == 1:
+            G = nx.Graph()
+        else:
+            G = nx.DiGraph()
         data = input_text.get("1.0", "end")
         lines = data.strip().split("\n")
-        num_v, num_e = map(int, lines[0].split())
-        for v in range(1, num_v + 1):
-            G.add_node(v)
         for line in lines[1:]:
-            u, v = map(int, line.split("-"))
+            u, v = map(int, line.split(" "))
+            G.add_node(u)
+            G.add_node(v)
             G.add_edge(u, v)
         global pos
         pos = nx.spring_layout(G)
 
-    # Create a new figure
-    print(list(G.edges))
-
     plt.clf()
     fig = plt.figure()
-
     # Draw the graph
     nx.draw(G, pos, with_labels=True, node_color='skyblue',
-            node_size=500, edge_color='gray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1, connectionstyle="arc3, rad=0.1")
-
+            node_size=500, edge_color='lightgray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1, connectionstyle="arc3, rad=0.1")
     # Create a Tkinter frame as a container for the canvas and toolbar
     frame = tk.Frame(root)
     frame.grid(row=0, column=0, sticky=tk.NSEW)
-
     # Create a Tkinter canvas
     canvas = FigureCanvasTkAgg(fig, master=frame)
     canvas.draw()
     canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-
     # Add a navigation toolbar
     toolbar = NavigationToolbar2Tk(canvas, frame)
     toolbar.update()
     toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
 
 
-# DFS
-def DFS():
-    global pos  # Update the position variable
-    # Create a new figure
-    fig = plt.figure()
-
-    # Draw the graph
-    nx.draw(G, pos, with_labels=True, node_color='skyblue',
-            node_size=500, edge_color='gray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1,
-            connectionstyle="arc3, rad=0.1")
-
-    # Create a Tkinter frame as a container for the canvas and toolbar
-    frame = tk.Frame(root)
-    frame.grid(row=0, column=0, sticky=tk.NSEW)
-
-    # Create a Tkinter canvas
-    canvas = FigureCanvasTkAgg(fig, master=frame)
-    canvas.draw()
-    canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-
-    # Add a navigation toolbar
-    toolbar = NavigationToolbar2Tk(canvas, frame)
-    toolbar.update()
-    toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
-
-    # Function to update node and edge colors
-    def update_colors(frame):
-        for node in G.nodes:
-            node_color = random.choice(['red', 'blue', 'green'])
-            G.nodes[node]['color'] = node_color
-        for edge in G.edges:
-            edge_color = random.choice(['red', 'blue', 'green'])
-            G.edges[edge]['color'] = edge_color
-        nx.draw(G, pos, with_labels=True, node_color=[G.nodes[n]['color'] for n in G.nodes],
-                node_size=500, edge_color=[G.edges[e]['color'] for e in G.edges],
-                edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1,
-                connectionstyle="arc3, rad=0.1")  # Add curved edges
-
-    # Update colors every second
-    anim = FuncAnimation(fig, update_colors, interval=1000,
-                         cache_frame_data=False)
-
-    # Start the animation
-    anim._start()
-
-    # Set the edge color in the initial graph drawing
-    for edge in G.edges:
-        G.edges[edge]['color'] = 'gray'
-
-
-# BFS
 def BFS():
+    global pos, anim, running
 
-    print("BFS")
+    sorted_nodes = sorted(G.nodes)
+    start_index = sorted_nodes[0]
+    end_index = sorted_nodes[len(sorted_nodes)-1]
+
+    # if not input start_node, set start_node = start_index as default
+    if starting_vertex_text.get("1.0", "end").strip() != '':
+        start_node = int(starting_vertex_text.get("1.0", "end").strip())
+    else:
+        start_node = start_index
+        starting_vertex_text.insert(tk.END, start_index)
+    if target_vertex_text.get("1.0", "end").strip() != '':
+        target_node = int(target_vertex_text.get("1.0", "end").strip())
+    else:
+        target_node = end_index
+
+    # if no BFS or DFS traversy is running
+    if not running:
+        # BFS queue
+        bfs_queue = deque()
+        visited = set()
+        running = 1
+
+        # Create a new figure
+        fig = plt.figure()
+        # Draw the graph
+        nx.draw(G, pos, with_labels=True, node_color='skyblue',
+                node_size=500, edge_color='gray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1,
+                connectionstyle="arc3, rad=0.1")
+        # Create a Tkinter frame as a container for the canvas and toolbar
+        frame = tk.Frame(root)
+        frame.grid(row=0, column=0, sticky=tk.NSEW)
+        # Create a Tkinter canvas
+        canvas = FigureCanvasTkAgg(fig, master=frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        # Add a navigation toolbar
+        toolbar = NavigationToolbar2Tk(canvas, frame)
+        toolbar.update()
+        toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
+
+        # add start_node to queue
+        bfs_queue.append(start_node)
+        # Used to trace back path from target_node
+        previous = {start_node: None}
+
+        output_text.delete('1.0', tk.END)
+        output_text.insert(tk.END, "--- Started BFS Traversal:\n")
+        output_text.insert(
+            tk.END, "    Initial queue: [" + str(start_node) + "]\n")
+        trace = []
+
+        # Check if all neighbors are visited
+        def visitedAllNeighbor(node):
+            for neighbor in G.neighbors(node):
+                if neighbor not in visited:
+                    return 0
+            return 1
+
+        # Run BFS
+        def animateBFS(frame, canvas, animation):
+
+            # While queue is not empty
+            if bfs_queue:
+
+                current_node = bfs_queue.popleft()
+                visited.add(current_node)
+                trace.append(current_node)
+
+                # Set node color for the current node
+                node_colors = ['yellow' if node == current_node else 'skyblue' if node not in visited else 'gray'
+                               for node in G.nodes]
+
+                edge_colors = ['lightgray' for _ in G.edges]
+
+                # Clear the previous figure
+                plt.clf()
+
+                nx.draw(G, pos, with_labels=True, node_color=node_colors,
+                        node_size=500, edge_color=edge_colors, edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0,
+                        edge_vmax=1, connectionstyle="arc3, rad=0.1")
+
+                # Update canvas for animation
+                canvas.draw()
+                root.update()
+
+                # if input target_node --> stop when current_node == target_node
+                if target_vertex_text.get("1.0", "end").strip() != '':
+                    if current_node != target_node:
+                        global running
+                        # if target_node cant be reach from current_node
+                        if len(bfs_queue) == 0 and target_node not in visited and visitedAllNeighbor(current_node):
+                            line = "    Current node: " + \
+                                str(current_node) + " - Queue: []\n"
+                            output_text.insert(tk.END, line)
+                            output_text.insert(
+                                tk.END, "--- Could not reach target node (" + str(target_node) + ")!\n")
+                            anim.event_source.stop()  # Stop the animation
+                            running = 0
+                        else:
+                            line = "    Current node: " + \
+                                str(current_node) + " - "
+                            output_text.insert(tk.END, line)
+
+                            # Enqueue neighbors of the current node for the next iteration
+                            neighbors = sorted(list(G.neighbors(current_node)))
+                            for neighbor in neighbors:
+                                if neighbor not in visited and neighbor not in bfs_queue:
+                                    bfs_queue.append(neighbor)
+                                    previous[neighbor] = current_node
+
+                            queue = ""
+                            for i in range(len(bfs_queue)-1):
+                                queue += str(bfs_queue[i]) + ","
+                            queue += str(bfs_queue[len(bfs_queue)-1])
+                            line = "Queue: [" + queue + "]\n"
+                            output_text.insert(tk.END, line)
+                    # reached target_node
+                    else:
+                        if starting_vertex_text.get("1.0", "end").strip() == "" and target_vertex_text.get("1.0", "end").strip() == "":
+                            line = "    Current node: " + \
+                                str(current_node) + " - Queue: []\n"
+                            output_text.insert(tk.END, line)
+                        else:
+                            line = "    Current node: " + \
+                                str(current_node) + "\n"
+                            output_text.insert(tk.END, line)
+
+                        output_text.insert(
+                            tk.END, "--- BFS traversal complete!\n")
+                        tracee = "- Visit order: "
+                        for i in range(len(trace)-1):
+                            tracee += str(trace[i]) + "->"
+                        tracee += str(trace[len(trace)-1])
+                        output_text.insert(tk.END, tracee + "\n")
+
+                        path = []
+                        current = target_node
+                        while current is not None:
+                            path.append(current)
+                            current = previous[current]
+                        path.reverse()
+
+                        pathh = ""
+                        for i in range(len(path)-1):
+                            pathh += str(path[i]) + "->"
+                        pathh += str(path[len(path)-1])
+                        output_text.insert(
+                            tk.END, "- Shortest path from start vertex (" + str(start_node) + ") to target vertex (" + str(target_node) + "): " + pathh)
+
+                        anim.event_source.stop()  # Stop the animation
+                        running = 0
+                # if not input target_node --> BFS traversy from start_node
+                else:
+                    line = "    Current node: " + str(current_node) + " - "
+                    output_text.insert(tk.END, line)
+
+                    # Enqueue neighbors of the current node for the next iteration
+                    neighbors = sorted(list(G.neighbors(current_node)))
+                    for neighbor in neighbors:
+                        if neighbor not in visited and neighbor not in bfs_queue:
+                            bfs_queue.append(neighbor)
+                            previous[neighbor] = current_node
+                    queue = ""
+                    for i in range(len(bfs_queue)-1):
+                        queue += str(bfs_queue[i]) + ","
+                    if len(bfs_queue) == 0:
+                        queue = ""
+                    else:
+                        queue += str(bfs_queue[len(bfs_queue)-1])
+                    line = "Queue: [" + queue + "]\n"
+                    output_text.insert(tk.END, line)
+            # just in case start_node == target_node
+            elif start_node != target_node:
+                # BFS traversal completed
+                output_text.insert(tk.END, "--- BFS traversal complete!\n")
+                tracee = "- Visit order: "
+                for i in range(len(trace)-1):
+                    tracee += str(trace[i]) + "->"
+                tracee += str(trace[len(trace)-1])
+                output_text.insert(tk.END, tracee + "\n")
+
+                anim.event_source.stop()  # Stop the animation
+                running = 0
+
+        # Loop every 1.5 seconds to change animation
+        anim = FuncAnimation(fig, animateBFS, fargs=(
+            canvas, anim), interval=1500, cache_frame_data=False)
+
+        # Start the animation
+        anim._start()
 
 
-####################     GUI     #######################
+def DFS():
+    global pos, anim, running
+
+    sorted_nodes = sorted(G.nodes)
+    start_index = sorted_nodes[0]
+    end_index = sorted_nodes[len(sorted_nodes)-1]
+
+    # if not input start_node, set start_node = start_index as default
+    if starting_vertex_text.get("1.0", "end").strip() != '':
+        start_node = int(starting_vertex_text.get("1.0", "end").strip())
+    else:
+        start_node = start_index
+        starting_vertex_text.insert(tk.END, start_index)
+
+    if target_vertex_text.get("1.0", "end").strip() != '':
+        target_node = int(target_vertex_text.get("1.0", "end").strip())
+    else:
+        target_node = end_index
+
+    # if no BFS or DFS traversy is running
+    if not running:
+        # DFS stack
+        dfs_stack = []
+        visited = set()
+        running = 1
+
+        # Create a new figure
+        fig = plt.figure()
+
+        # Draw the graph
+        nx.draw(G, pos, with_labels=True, node_color='skyblue',
+                node_size=500, edge_color='gray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1,
+                connectionstyle="arc3, rad=0.1")
+
+        # Create a Tkinter frame as a container for the canvas and toolbar
+        frame = tk.Frame(root)
+        frame.grid(row=0, column=0, sticky=tk.NSEW)
+
+        # Create a Tkinter canvas
+        canvas = FigureCanvasTkAgg(fig, master=frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        # Add a navigation toolbar
+        toolbar = NavigationToolbar2Tk(canvas, frame)
+        toolbar.update()
+        toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
+
+        # Perform DFS traversal
+        dfs_stack.append(start_node)
+
+        output_text.delete('1.0', tk.END)
+        output_text.insert(tk.END, "--- Started DFS Traversal:\n")
+        output_text.insert(
+            tk.END, "    Initial stack: [" + str(start_node) + "]\n")
+        trace = []
+
+        # Check if all neighbors are visited
+        def visitedAllNeighbor(node):
+            for neighbor in G.neighbors(node):
+                if neighbor not in visited:
+                    return 0
+            return 1
+
+        # Run DFS
+        def animateDFS(frame, canvas, animation):
+
+            # while stack is not empty
+            if dfs_stack:
+
+                current_node = dfs_stack.pop()
+                visited.add(current_node)
+                trace.append(current_node)
+
+                # Set node color for the current node
+                node_colors = ['yellow' if node == current_node else 'skyblue' if node not in visited else 'gray'
+                               for node in G.nodes]
+
+                edge_colors = ['lightgray' for _ in G.edges]
+
+                # Clear the previous figure
+                plt.clf()
+
+                nx.draw(G, pos, with_labels=True, node_color=node_colors,
+                        node_size=500, edge_color=edge_colors, edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0,
+                        edge_vmax=1, connectionstyle="arc3, rad=0.1")
+
+                # Update canvas for animation
+                canvas.draw()
+                root.update()
+
+                # if input target_node --> stop when current_node == target_node
+                if target_vertex_text.get("1.0", "end").strip() != '':
+                    if current_node != target_node:
+                        global running
+                        # if target_node cant be reach from current_node
+                        if len(dfs_stack) == 0 and target_node not in visited and visitedAllNeighbor(current_node):
+                            line = "    Current node: " + \
+                                str(current_node) + " - Stack: []\n"
+                            output_text.insert(tk.END, line)
+                            output_text.insert(
+                                tk.END, "--- Could not reach target node (" + str(target_node) + ")!\n")
+                            anim.event_source.stop()  # Stop the animation
+                            running = 0
+                        else:
+                            line = "    Current node: " + \
+                                str(current_node) + " - "
+                            output_text.insert(tk.END, line)
+
+                            # Enqueue neighbors of the current node for the next iteration
+                            neighbors = sorted(list(G.neighbors(current_node)))
+                            neighbors.reverse()
+                            for neighbor in neighbors:
+                                if neighbor not in visited and neighbor not in dfs_stack:
+                                    dfs_stack.append(neighbor)
+                            stack = ""
+                            for i in range(len(dfs_stack)-1):
+                                stack += str(dfs_stack[i]) + ","
+                            stack += str(dfs_stack[len(dfs_stack)-1])
+                            line = "Stack: [" + stack + "]\n"
+                            output_text.insert(tk.END, line)
+                    # reached target_node
+                    else:
+                        if starting_vertex_text.get("1.0", "end").strip() == "" and target_vertex_text.get("1.0", "end").strip() == "":
+                            line = "    Current node: " + \
+                                str(current_node) + " - Stack: []\n"
+                            output_text.insert(tk.END, line)
+                        else:
+                            line = "    Current node: " + \
+                                str(current_node) + "\n"
+                            output_text.insert(tk.END, line)
+
+                        output_text.insert(
+                            tk.END, "--- DFS traversal complete!\n")
+                        tracee = "- Visit order: "
+                        for i in range(len(trace)-1):
+                            tracee += str(trace[i]) + "->"
+                        tracee += str(trace[len(trace)-1])
+                        output_text.insert(tk.END, tracee + "\n")
+
+                        pathDFS = []
+                        traceRe = trace.copy()
+                        traceRe.reverse()
+                        pathDFS.append(traceRe[0])
+                        
+                        i = 0
+                        if undirected:
+                            while i < len(traceRe) - 1:
+                                if traceRe[i+1] in G.neighbors(traceRe[i]):
+                                    pathDFS.append(traceRe[i+1])
+                                    i += 1
+                                else:
+                                    del traceRe[i+1]
+                        else:
+                            while i < len(traceRe) - 1:
+                                if traceRe[i] in G.successors(traceRe[i+1]):
+                                    pathDFS.append(traceRe[i+1])
+                                    i += 1
+                                else:
+                                    del traceRe[i+1]
+                        pathDFS.reverse()
+                        pathh = ""
+                        for i in range(len(pathDFS)-1):
+                            pathh += str(pathDFS[i]) + "->"
+                        pathh += str(pathDFS[len(pathDFS)-1])
+                        output_text.insert(
+                            tk.END, "- Path from start vertex (" + str(start_node) + ") to target vertex (" + str(target_node) + "): " + pathh)
+
+                        anim.event_source.stop()  # Stop the animation
+                        running = 0
+                # if not input target_node --> BFS traversy from start_node
+                else:
+                    line = "    Current node: " + str(current_node) + " - "
+                    output_text.insert(tk.END, line)
+
+                    # Enqueue neighbors of the current node for the next iteration
+                    neighbors = sorted(list(G.neighbors(current_node)))
+                    neighbors.reverse()
+                    for neighbor in neighbors:
+                        if neighbor not in visited and neighbor not in dfs_stack:
+                            dfs_stack.append(neighbor)
+                    stack = ""
+                    for i in range(len(dfs_stack)-1):
+                        stack += str(dfs_stack[i]) + ","
+                    if len(dfs_stack) == 0:
+                        stack = ""
+                    else:
+                        stack += str(dfs_stack[len(dfs_stack)-1])
+                    line = "Stack: [" + stack + "]\n"
+                    output_text.insert(tk.END, line)
+            # just in case start_node == target_node
+            elif start_node != target_node:
+                # DFS traversal completed
+                output_text.insert(tk.END, "--- DFS traversal complete!\n")
+                tracee = "- Visit order: "
+                for i in range(len(trace)-1):
+                    tracee += str(trace[i]) + "->"
+                tracee += str(trace[len(trace)-1])
+                output_text.insert(tk.END, tracee + "\n")
+
+                anim.event_source.stop()  # Stop the animation
+                running = 0
+
+        # Loop every 1.5 seconds to change animation
+        anim = FuncAnimation(fig, animateDFS, fargs=(
+            canvas, anim), interval=1500, cache_frame_data=False)
+
+        # Start the animation
+        anim._start()
+
+
+####################     WIDGETS     #######################
 
 
 # Create the main Tkinter window
 root = tk.Tk()
 root.title("Graph Visualization")
-root.geometry("1000x700")
+# root.attributes('-fullscreen', True)
+root.geometry(windowSize)
 
 # Create a button frame on the right side
 button_frame = tk.Frame(root)
@@ -227,9 +794,7 @@ column2_frame = tk.Frame(columns_frame)
 column2_frame.grid(row=0, column=1, padx=10, pady=10, sticky=tk.NSEW)
 
 # Widgets for column 1
-
 graph_type_var = tk.StringVar(value="Graph")
-
 graph_type_radio1 = tk.Radiobutton(
     column1_frame, text="Undirected Graph", variable=graph_type_var, value="Graph", command=undigraph)
 graph_type_radio1.pack(pady=5)
@@ -267,20 +832,59 @@ remove_edge_button = tk.Button(
 remove_edge_button.pack(pady=5)
 
 # Ô nhập đồ thị
-input_text = tk.Text(button_frame, height=15, width=20)
+def disable_editing(event):
+    return "break"
+input_text = tk.Text(button_frame, height=10, width=20)
+input_text.bind("<Key>", disable_editing)
 input_text.pack(pady=5)
+
+import_graph_button = tk.Button(
+    button_frame, text="Import Graph", command=import_graph)
+import_graph_button.pack(pady=10)
 
 create_graph_button = tk.Button(
     button_frame, text="Create Graph", command=create_graph)
 create_graph_button.pack(pady=10)
 
-run_DFS_button = tk.Button(
-    button_frame, text="Run DFS", command=DFS)
-run_DFS_button.pack(pady=10)
+# Create a frame for the starting vertex label and text
+starting_vertex_frame = tk.Frame(button_frame)
+starting_vertex_frame.pack(pady=5)
 
-run_BFS_button = tk.Button(
-    button_frame, text="Run BFS", command=BFS)
-run_BFS_button.pack(pady=10)
+# Add the label and text widget
+starting_vertex_label = tk.Label(
+    starting_vertex_frame, text="Start vertex:")
+starting_vertex_label.pack(side=tk.LEFT, padx=5)
+
+starting_vertex_text = tk.Text(starting_vertex_frame, height=1, width=5)
+starting_vertex_text.pack(side=tk.LEFT, padx=5)
+
+# Create a frame for the starting vertex label and text
+target_vertex_frame = tk.Frame(button_frame)
+target_vertex_frame.pack(pady=5)
+
+# Add the label and text widget
+target_vertex_label = tk.Label(
+    target_vertex_frame, text="Target vertex:")
+target_vertex_label.pack(side=tk.LEFT, padx=5)
+
+target_vertex_text = tk.Text(target_vertex_frame, height=1, width=5)
+target_vertex_text.pack(side=tk.LEFT, padx=5)
+
+# Create a frame for the DFS and BFS buttons
+dfs_bfs_frame = tk.Frame(button_frame)
+dfs_bfs_frame.pack(pady=10)
+
+# Add the DFS and BFS buttons
+run_DFS_button = tk.Button(dfs_bfs_frame, text="Run DFS", command=DFS)
+run_DFS_button.pack(side=tk.LEFT, padx=5)
+
+run_BFS_button = tk.Button(dfs_bfs_frame, text="Run BFS", command=BFS)
+run_BFS_button.pack(side=tk.LEFT, padx=5)
+
+# Show trace
+output_text = tk.Text(button_frame, height=8, width=42)
+output_text.bind("<Key>", disable_editing)
+output_text.pack(pady=5)
 
 # Start the Tkinter event loop
 root.mainloop()
