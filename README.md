@@ -15,11 +15,8 @@
       (Ví dụ input: Vertex: 6, Edge: 3 4)
       
   -  Input Textarea hiển thị dữ liệu của đồ thị có dạng:
-      4 4 // Dòng đầu: số đỉnh, số cạnh
-      0 1 // Các dòng tiếp theo các cặp đỉnh ứng với các cạnh của đồ thị
-      1 2
-      1 3
-      2 3
+      + Dòng đầu là số đỉnh và cạnh của đồ thị: <số đỉnh> <số cạnh>
+      + Các dòng tiếp theo là các cặp đỉnh ứng với các cạnh của đồ thị: <đỉnh u> <đỉnh v>
    
   -  Nút Import Graph: Import dữ liệu đồ thị từ file .txt bất kỳ (đúng dạng trên) vào Input Textarea.
 
