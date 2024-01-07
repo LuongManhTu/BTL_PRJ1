@@ -27,7 +27,7 @@
   -  Input box nhập Start vertex và Target vertex: Nhập đỉnh bắt đầu và đỉnh đích.
       + Nếu để trống Start vertex: Mặc định Start Vertex là nút có chỉ số nhỏ nhất của đồ thị.
       + Nếu để trống Target Vertex: Trở thành thuật toán duyệt đồ thị từ đỉnh bắt đầu (Start vertex)
-        Nếu điền Target vertex: Trờ thành thuật toán tìm đường trên đồ thị từ đỉnh bắt đầu (Start vertex) tới đỉnh đích (Target vertex)
+      + Nếu điền Target vertex: Trờ thành thuật toán tìm đường trên đồ thị từ đỉnh bắt đầu (Start vertex) tới đỉnh đích (Target vertex)
 
   -  Hai nút DFS, BFS: chạy thuật toán DFS hoặc BFS trên đồ thị đã vẽ.
 
