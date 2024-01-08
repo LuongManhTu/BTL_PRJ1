@@ -17,6 +17,7 @@ undirected = 1 # graph type: undirected
 running = 0 # running == 1 -> a BFS or DFS animation is running -> no interuption
 anim = None
 windowSize = "1280x750"
+animTimeStep = 3000 # animation time step
 
 
 ####################     FUNCTIONS     #######################
@@ -336,57 +337,14 @@ def create_graph():
             G.add_node(v)
             G.add_edge(u, v)
         global pos
-        pos = nx.spring_layout(G)
-
-    plt.clf()
-    fig = plt.figure()
-    # Draw the graph
-    nx.draw(G, pos, with_labels=True, node_color='skyblue',
-            node_size=500, edge_color='lightgray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1, connectionstyle="arc3, rad=0.1")
-    # Create a Tkinter frame as a container for the canvas and toolbar
-    frame = tk.Frame(root)
-    frame.grid(row=0, column=0, sticky=tk.NSEW)
-    # Create a Tkinter canvas
-    canvas = FigureCanvasTkAgg(fig, master=frame)
-    canvas.draw()
-    canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-    # Add a navigation toolbar
-    toolbar = NavigationToolbar2Tk(canvas, frame)
-    toolbar.update()
-    toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
-
-
-def BFS():
-    global pos, anim, running
-
-    sorted_nodes = sorted(G.nodes)
-    start_index = sorted_nodes[0]
-    end_index = sorted_nodes[len(sorted_nodes)-1]
-
-    # if not input start_node, set start_node = start_index as default
-    if starting_vertex_text.get("1.0", "end").strip() != '':
-        start_node = int(starting_vertex_text.get("1.0", "end").strip())
-    else:
-        start_node = start_index
-        starting_vertex_text.insert(tk.END, start_index)
-    if target_vertex_text.get("1.0", "end").strip() != '':
-        target_node = int(target_vertex_text.get("1.0", "end").strip())
-    else:
-        target_node = end_index
-
-    # if no BFS or DFS traversy is running
-    if not running:
-        # BFS queue
-        bfs_queue = deque()
-        visited = set()
-        running = 1
-
-        # Create a new figure
+        if not pos:    
+            pos = nx.spring_layout(G)
+    if len(G.nodes):
+        plt.clf()
         fig = plt.figure()
         # Draw the graph
         nx.draw(G, pos, with_labels=True, node_color='skyblue',
-                node_size=500, edge_color='gray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1,
-                connectionstyle="arc3, rad=0.1")
+                node_size=500, edge_color='lightgray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1, connectionstyle="arc3, rad=0.1")
         # Create a Tkinter frame as a container for the canvas and toolbar
         frame = tk.Frame(root)
         frame.grid(row=0, column=0, sticky=tk.NSEW)
@@ -398,369 +356,463 @@ def BFS():
         toolbar = NavigationToolbar2Tk(canvas, frame)
         toolbar.update()
         toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
-
-        # add start_node to queue
-        bfs_queue.append(start_node)
-        # Used to trace back path from target_node
-        previous = {start_node: None}
-
+    else:
+        messagebox.showinfo("Alert", "Blank Graph!")
+    
+    
+def delete_graph():
+    global G
+    if len(G.nodes):
+        G.clear()
+        plt.clf()
+        fig = plt.figure()
+        # Create a Tkinter frame as a container for the canvas and toolbar
+        frame = tk.Frame(root)
+        frame.grid(row=0, column=0, sticky=tk.NSEW)
+        # Create a Tkinter canvas
+        canvas = FigureCanvasTkAgg(fig, master=frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        # Add a navigation toolbar
+        toolbar = NavigationToolbar2Tk(canvas, frame)
+        toolbar.update()
+        toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
+        
+        input_text.delete('1.0', tk.END)
         output_text.delete('1.0', tk.END)
-        output_text.insert(tk.END, "--- Started BFS Traversal:\n")
-        output_text.insert(
-            tk.END, "    Initial queue: [" + str(start_node) + "]\n")
-        trace = []
+    else:
+        messagebox.showinfo("Alert", "Blank Graph!")
 
-        # Check if all neighbors are visited
-        def visitedAllNeighbor(node):
-            for neighbor in G.neighbors(node):
-                if neighbor not in visited:
-                    return 0
-            return 1
 
-        # Run BFS
-        def animateBFS(frame, canvas, animation):
+def BFS():
+    global pos, anim, running
+    
+    if len(G.nodes):
+        sorted_nodes = sorted(G.nodes)
+        start_index = sorted_nodes[0]
+        end_index = sorted_nodes[len(sorted_nodes)-1]
 
-            # While queue is not empty
-            if bfs_queue:
+        # if not input start_node, set start_node = start_index as default
+        if starting_vertex_text.get("1.0", "end").strip() != '':
+            start_node = int(starting_vertex_text.get("1.0", "end").strip())
+        else:
+            start_node = start_index
+            starting_vertex_text.insert(tk.END, start_index)
+        if target_vertex_text.get("1.0", "end").strip() != '':
+            target_node = int(target_vertex_text.get("1.0", "end").strip())
+        else:
+            target_node = end_index
 
-                current_node = bfs_queue.popleft()
-                visited.add(current_node)
-                trace.append(current_node)
+        # if no BFS or DFS traversy is running
+        if not running:
+            # BFS queue
+            bfs_queue = deque()
+            visited = set()
+            running = 1
 
-                # Set node color for the current node
-                node_colors = ['yellow' if node == current_node else 'skyblue' if node not in visited else 'gray'
-                               for node in G.nodes]
+            # Create a new figure
+            fig = plt.figure()
+            # Draw the graph
+            nx.draw(G, pos, with_labels=True, node_color='skyblue',
+                    node_size=500, edge_color='gray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1,
+                    connectionstyle="arc3, rad=0.1")
+            # Create a Tkinter frame as a container for the canvas and toolbar
+            frame = tk.Frame(root)
+            frame.grid(row=0, column=0, sticky=tk.NSEW)
+            # Create a Tkinter canvas
+            canvas = FigureCanvasTkAgg(fig, master=frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            # Add a navigation toolbar
+            toolbar = NavigationToolbar2Tk(canvas, frame)
+            toolbar.update()
+            toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
 
-                edge_colors = ['lightgray' for _ in G.edges]
+            # add start_node to queue
+            bfs_queue.append(start_node)
+            # Used to trace back path from target_node
+            previous = {start_node: None}
 
-                # Clear the previous figure
-                plt.clf()
+            output_text.delete('1.0', tk.END)
+            output_text.insert(tk.END, "--- Started BFS Traversal:\n")
+            output_text.insert(
+                tk.END, "    Initial queue: [" + str(start_node) + "]\n")
+            trace = []
 
-                nx.draw(G, pos, with_labels=True, node_color=node_colors,
-                        node_size=500, edge_color=edge_colors, edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0,
-                        edge_vmax=1, connectionstyle="arc3, rad=0.1")
+            # Check if all neighbors are visited
+            def visitedAllNeighbor(node):
+                for neighbor in G.neighbors(node):
+                    if neighbor not in visited:
+                        return 0
+                return 1
 
-                # Update canvas for animation
-                canvas.draw()
-                root.update()
+            # Run BFS
+            def animateBFS(frame, canvas, animation):
 
-                # if input target_node --> stop when current_node == target_node
-                if target_vertex_text.get("1.0", "end").strip() != '':
-                    if current_node != target_node:
-                        global running
-                        # if target_node cant be reach from current_node
-                        if len(bfs_queue) == 0 and target_node not in visited and visitedAllNeighbor(current_node):
-                            line = "    Current node: " + \
-                                str(current_node) + " - Queue: []\n"
-                            output_text.insert(tk.END, line)
+                # While queue is not empty
+                if bfs_queue:
+
+                    current_node = bfs_queue.popleft()
+                    visited.add(current_node)
+                    trace.append(current_node)
+                    
+
+                    # Set nodes' color
+                    node_colors = ['yellow' if node == current_node 
+                                else 'lightgreen' if (node in G.neighbors(current_node) and node not in visited and node not in bfs_queue) 
+                                else 'lightgreen' if node in bfs_queue
+                                else 'gray' if node in visited 
+                                else 'skyblue' for node in G.nodes]
+                    
+                    node_edge_colors = ['black' if node == current_node
+                                else 'lightgreen' if (node in G.neighbors(current_node) and node not in visited and node not in bfs_queue)
+                                        else 'lightgreen' if node in bfs_queue
+                                else 'gray' if node in visited
+                                else 'skyblue' for node in G.nodes]
+
+                    edge_colors = ['lightgray' for _ in G.edges]
+
+                    # Clear the previous figure
+                    plt.clf()
+
+                    nx.draw(G, pos, with_labels=True, node_color=node_colors,
+                            node_size=500, edge_color=edge_colors, edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0,
+                            edge_vmax=1, connectionstyle="arc3, rad=0.1", edgecolors=node_edge_colors)
+
+                    # Update canvas for animation
+                    canvas.draw()
+                    root.update()
+
+                    # if input target_node --> stop when current_node == target_node
+                    if target_vertex_text.get("1.0", "end").strip() != '':
+                        if current_node != target_node:
+                            global running
+                            # if target_node cant be reach from current_node
+                            if len(bfs_queue) == 0 and target_node not in visited and visitedAllNeighbor(current_node):
+                                line = "    Current node: " + \
+                                    str(current_node) + " - Queue: []\n"
+                                output_text.insert(tk.END, line)
+                                output_text.insert(
+                                    tk.END, "--- Could not reach target node (" + str(target_node) + ")!\n")
+                                anim.event_source.stop()  # Stop the animation
+                                running = 0
+                            else:
+                                line = "    Current node: " + \
+                                    str(current_node) + " - "
+                                output_text.insert(tk.END, line)
+
+                                # Enqueue neighbors of the current node for the next iteration
+                                neighbors = sorted(list(G.neighbors(current_node)))
+                                for neighbor in neighbors:
+                                    if neighbor not in visited and neighbor not in bfs_queue:
+                                        bfs_queue.append(neighbor)
+                                        previous[neighbor] = current_node
+
+                                queue = ""
+                                for i in range(len(bfs_queue)-1):
+                                    queue += str(bfs_queue[i]) + ","
+                                queue += str(bfs_queue[len(bfs_queue)-1])
+                                line = "Queue: [" + queue + "]\n"
+                                output_text.insert(tk.END, line)
+                        # reached target_node
+                        else:
+                            if starting_vertex_text.get("1.0", "end").strip() == "" and target_vertex_text.get("1.0", "end").strip() == "":
+                                line = "    Current node: " + \
+                                    str(current_node) + " - Queue: []\n"
+                                output_text.insert(tk.END, line)
+                            else:
+                                line = "    Current node: " + \
+                                    str(current_node) + "\n"
+                                output_text.insert(tk.END, line)
+
                             output_text.insert(
-                                tk.END, "--- Could not reach target node (" + str(target_node) + ")!\n")
+                                tk.END, "--- BFS traversal complete!\n")
+                            tracee = "- Visit order: "
+                            for i in range(len(trace)-1):
+                                tracee += str(trace[i]) + "->"
+                            tracee += str(trace[len(trace)-1])
+                            output_text.insert(tk.END, tracee + "\n")
+
+                            path = []
+                            current = target_node
+                            while current is not None:
+                                path.append(current)
+                                current = previous[current]
+                            path.reverse()
+
+                            pathh = ""
+                            for i in range(len(path)-1):
+                                pathh += str(path[i]) + "->"
+                            pathh += str(path[len(path)-1])
+                            output_text.insert(
+                                tk.END, "- Shortest path from start vertex (" + str(start_node) + ") to target vertex (" + str(target_node) + "): " + pathh)
+
                             anim.event_source.stop()  # Stop the animation
                             running = 0
-                        else:
-                            line = "    Current node: " + \
-                                str(current_node) + " - "
-                            output_text.insert(tk.END, line)
-
-                            # Enqueue neighbors of the current node for the next iteration
-                            neighbors = sorted(list(G.neighbors(current_node)))
-                            for neighbor in neighbors:
-                                if neighbor not in visited and neighbor not in bfs_queue:
-                                    bfs_queue.append(neighbor)
-                                    previous[neighbor] = current_node
-
-                            queue = ""
-                            for i in range(len(bfs_queue)-1):
-                                queue += str(bfs_queue[i]) + ","
-                            queue += str(bfs_queue[len(bfs_queue)-1])
-                            line = "Queue: [" + queue + "]\n"
-                            output_text.insert(tk.END, line)
-                    # reached target_node
+                    # if not input target_node --> BFS traversy from start_node
                     else:
-                        if starting_vertex_text.get("1.0", "end").strip() == "" and target_vertex_text.get("1.0", "end").strip() == "":
-                            line = "    Current node: " + \
-                                str(current_node) + " - Queue: []\n"
-                            output_text.insert(tk.END, line)
-                        else:
-                            line = "    Current node: " + \
-                                str(current_node) + "\n"
-                            output_text.insert(tk.END, line)
+                        line = "    Current node: " + str(current_node) + " - "
+                        output_text.insert(tk.END, line)
 
-                        output_text.insert(
-                            tk.END, "--- BFS traversal complete!\n")
-                        tracee = "- Visit order: "
-                        for i in range(len(trace)-1):
-                            tracee += str(trace[i]) + "->"
-                        tracee += str(trace[len(trace)-1])
-                        output_text.insert(tk.END, tracee + "\n")
-
-                        path = []
-                        current = target_node
-                        while current is not None:
-                            path.append(current)
-                            current = previous[current]
-                        path.reverse()
-
-                        pathh = ""
-                        for i in range(len(path)-1):
-                            pathh += str(path[i]) + "->"
-                        pathh += str(path[len(path)-1])
-                        output_text.insert(
-                            tk.END, "- Shortest path from start vertex (" + str(start_node) + ") to target vertex (" + str(target_node) + "): " + pathh)
-
-                        anim.event_source.stop()  # Stop the animation
-                        running = 0
-                # if not input target_node --> BFS traversy from start_node
-                else:
-                    line = "    Current node: " + str(current_node) + " - "
-                    output_text.insert(tk.END, line)
-
-                    # Enqueue neighbors of the current node for the next iteration
-                    neighbors = sorted(list(G.neighbors(current_node)))
-                    for neighbor in neighbors:
-                        if neighbor not in visited and neighbor not in bfs_queue:
-                            bfs_queue.append(neighbor)
-                            previous[neighbor] = current_node
-                    queue = ""
-                    for i in range(len(bfs_queue)-1):
-                        queue += str(bfs_queue[i]) + ","
-                    if len(bfs_queue) == 0:
+                        # Enqueue neighbors of the current node for the next iteration
+                        neighbors = sorted(list(G.neighbors(current_node)))
+                        for neighbor in neighbors:
+                            if neighbor not in visited and neighbor not in bfs_queue:
+                                bfs_queue.append(neighbor)
+                                previous[neighbor] = current_node
                         queue = ""
-                    else:
-                        queue += str(bfs_queue[len(bfs_queue)-1])
-                    line = "Queue: [" + queue + "]\n"
-                    output_text.insert(tk.END, line)
-            # just in case start_node == target_node
-            elif start_node != target_node:
-                # BFS traversal completed
-                output_text.insert(tk.END, "--- BFS traversal complete!\n")
-                tracee = "- Visit order: "
-                for i in range(len(trace)-1):
-                    tracee += str(trace[i]) + "->"
-                tracee += str(trace[len(trace)-1])
-                output_text.insert(tk.END, tracee + "\n")
+                        for i in range(len(bfs_queue)-1):
+                            queue += str(bfs_queue[i]) + ","
+                        if len(bfs_queue) == 0:
+                            queue = ""
+                        else:
+                            queue += str(bfs_queue[len(bfs_queue)-1])
+                        line = "Queue: [" + queue + "]\n"
+                        output_text.insert(tk.END, line)
+                # just in case start_node == target_node
+                elif start_node != target_node:
+                    # BFS traversal completed
+                    output_text.insert(tk.END, "--- BFS traversal complete!\n")
+                    tracee = "- Visit order: "
+                    for i in range(len(trace)-1):
+                        tracee += str(trace[i]) + "->"
+                    tracee += str(trace[len(trace)-1])
+                    output_text.insert(tk.END, tracee + "\n")
 
-                anim.event_source.stop()  # Stop the animation
-                running = 0
+                    anim.event_source.stop()  # Stop the animation
+                    running = 0
 
-        # Loop every 1.5 seconds to change animation
-        anim = FuncAnimation(fig, animateBFS, fargs=(
-            canvas, anim), interval=1500, cache_frame_data=False)
+            # Loop every 1.5 seconds to change animation
+            anim = FuncAnimation(fig, animateBFS, fargs=(
+                canvas, anim), interval=animTimeStep, cache_frame_data=False)
 
-        # Start the animation
-        anim._start()
+            # Start the animation
+            anim._start()
+    else:
+        messagebox.showinfo("Alert", "Blank Graph!")
 
 
 def DFS():
     global pos, anim, running
 
-    sorted_nodes = sorted(G.nodes)
-    start_index = sorted_nodes[0]
-    end_index = sorted_nodes[len(sorted_nodes)-1]
+    if len(G.nodes):    
+        sorted_nodes = sorted(G.nodes)
+        start_index = sorted_nodes[0]
+        end_index = sorted_nodes[len(sorted_nodes)-1]
 
-    # if not input start_node, set start_node = start_index as default
-    if starting_vertex_text.get("1.0", "end").strip() != '':
-        start_node = int(starting_vertex_text.get("1.0", "end").strip())
-    else:
-        start_node = start_index
-        starting_vertex_text.insert(tk.END, start_index)
+        # if not input start_node, set start_node = start_index as default
+        if starting_vertex_text.get("1.0", "end").strip() != '':
+            start_node = int(starting_vertex_text.get("1.0", "end").strip())
+        else:
+            start_node = start_index
+            starting_vertex_text.insert(tk.END, start_index)
 
-    if target_vertex_text.get("1.0", "end").strip() != '':
-        target_node = int(target_vertex_text.get("1.0", "end").strip())
-    else:
-        target_node = end_index
+        if target_vertex_text.get("1.0", "end").strip() != '':
+            target_node = int(target_vertex_text.get("1.0", "end").strip())
+        else:
+            target_node = end_index
 
-    # if no BFS or DFS traversy is running
-    if not running:
-        # DFS stack
-        dfs_stack = []
-        visited = set()
-        running = 1
+        # if no BFS or DFS traversy is running
+        if not running:
+            # DFS stack
+            dfs_stack = []
+            visited = set()
+            running = 1
 
-        # Create a new figure
-        fig = plt.figure()
+            # Create a new figure
+            fig = plt.figure()
 
-        # Draw the graph
-        nx.draw(G, pos, with_labels=True, node_color='skyblue',
-                node_size=500, edge_color='gray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1,
-                connectionstyle="arc3, rad=0.1")
+            # Draw the graph
+            nx.draw(G, pos, with_labels=True, node_color='skyblue',
+                    node_size=500, edge_color='gray', edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0, edge_vmax=1,
+                    connectionstyle="arc3, rad=0.1")
 
-        # Create a Tkinter frame as a container for the canvas and toolbar
-        frame = tk.Frame(root)
-        frame.grid(row=0, column=0, sticky=tk.NSEW)
+            # Create a Tkinter frame as a container for the canvas and toolbar
+            frame = tk.Frame(root)
+            frame.grid(row=0, column=0, sticky=tk.NSEW)
 
-        # Create a Tkinter canvas
-        canvas = FigureCanvasTkAgg(fig, master=frame)
-        canvas.draw()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            # Create a Tkinter canvas
+            canvas = FigureCanvasTkAgg(fig, master=frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        # Add a navigation toolbar
-        toolbar = NavigationToolbar2Tk(canvas, frame)
-        toolbar.update()
-        toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
+            # Add a navigation toolbar
+            toolbar = NavigationToolbar2Tk(canvas, frame)
+            toolbar.update()
+            toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
 
-        # Perform DFS traversal
-        dfs_stack.append(start_node)
+            # Perform DFS traversal
+            dfs_stack.append(start_node)
 
-        output_text.delete('1.0', tk.END)
-        output_text.insert(tk.END, "--- Started DFS Traversal:\n")
-        output_text.insert(
-            tk.END, "    Initial stack: [" + str(start_node) + "]\n")
-        trace = []
+            output_text.delete('1.0', tk.END)
+            output_text.insert(tk.END, "--- Started DFS Traversal:\n")
+            output_text.insert(
+                tk.END, "    Initial stack: [" + str(start_node) + "]\n")
+            trace = []
 
-        # Check if all neighbors are visited
-        def visitedAllNeighbor(node):
-            for neighbor in G.neighbors(node):
-                if neighbor not in visited:
-                    return 0
-            return 1
+            # Check if all neighbors are visited
+            def visitedAllNeighbor(node):
+                for neighbor in G.neighbors(node):
+                    if neighbor not in visited:
+                        return 0
+                return 1
 
-        # Run DFS
-        def animateDFS(frame, canvas, animation):
+            # Run DFS
+            def animateDFS(frame, canvas, animation):
 
-            # while stack is not empty
-            if dfs_stack:
+                # while stack is not empty
+                if dfs_stack:
 
-                current_node = dfs_stack.pop()
-                visited.add(current_node)
-                trace.append(current_node)
+                    current_node = dfs_stack.pop()
+                    visited.add(current_node)
+                    trace.append(current_node)
 
-                # Set node color for the current node
-                node_colors = ['yellow' if node == current_node else 'skyblue' if node not in visited else 'gray'
-                               for node in G.nodes]
+                    # Set nodes' color
+                    node_colors = ['yellow' if node == current_node
+                                else 'lightgreen' if (node in G.neighbors(current_node) and node not in visited and node not in dfs_stack)
+                                else 'lightgreen' if node in dfs_stack
+                                else 'gray' if node in visited
+                                else 'skyblue' for node in G.nodes]
 
-                edge_colors = ['lightgray' for _ in G.edges]
+                    node_edge_colors = ['black' if node == current_node
+                                        else 'lightgreen' if (node in G.neighbors(current_node) and node not in visited and node not in dfs_stack)
+                                        else 'lightgreen' if node in dfs_stack
+                                        else 'gray' if node in visited
+                                        else 'skyblue' for node in G.nodes]
 
-                # Clear the previous figure
-                plt.clf()
+                    edge_colors = ['lightgray' for _ in G.edges]
 
-                nx.draw(G, pos, with_labels=True, node_color=node_colors,
-                        node_size=500, edge_color=edge_colors, edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0,
-                        edge_vmax=1, connectionstyle="arc3, rad=0.1")
+                    # Clear the previous figure
+                    plt.clf()
 
-                # Update canvas for animation
-                canvas.draw()
-                root.update()
+                    nx.draw(G, pos, with_labels=True, node_color=node_colors,
+                            node_size=500, edge_color=edge_colors, edge_cmap=plt.cm.get_cmap('Blues'), edge_vmin=0,
+                            edge_vmax=1, connectionstyle="arc3, rad=0.1", edgecolors=node_edge_colors)
 
-                # if input target_node --> stop when current_node == target_node
-                if target_vertex_text.get("1.0", "end").strip() != '':
-                    if current_node != target_node:
-                        global running
-                        # if target_node cant be reach from current_node
-                        if len(dfs_stack) == 0 and target_node not in visited and visitedAllNeighbor(current_node):
-                            line = "    Current node: " + \
-                                str(current_node) + " - Stack: []\n"
-                            output_text.insert(tk.END, line)
+                    # Update canvas for animation
+                    canvas.draw()
+                    root.update()
+
+                    # if input target_node --> stop when current_node == target_node
+                    if target_vertex_text.get("1.0", "end").strip() != '':
+                        if current_node != target_node:
+                            global running
+                            # if target_node cant be reach from current_node
+                            if len(dfs_stack) == 0 and target_node not in visited and visitedAllNeighbor(current_node):
+                                line = "    Current node: " + \
+                                    str(current_node) + " - Stack: []\n"
+                                output_text.insert(tk.END, line)
+                                output_text.insert(
+                                    tk.END, "--- Could not reach target node (" + str(target_node) + ")!\n")
+                                anim.event_source.stop()  # Stop the animation
+                                running = 0
+                            else:
+                                line = "    Current node: " + \
+                                    str(current_node) + " - "
+                                output_text.insert(tk.END, line)
+
+                                # Enqueue neighbors of the current node for the next iteration
+                                neighbors = sorted(list(G.neighbors(current_node)))
+                                neighbors.reverse()
+                                for neighbor in neighbors:
+                                    if neighbor not in visited and neighbor not in dfs_stack:
+                                        dfs_stack.append(neighbor)
+                                stack = ""
+                                for i in range(len(dfs_stack)-1):
+                                    stack += str(dfs_stack[i]) + ","
+                                stack += str(dfs_stack[len(dfs_stack)-1])
+                                line = "Stack: [" + stack + "]\n"
+                                output_text.insert(tk.END, line)
+                        # reached target_node
+                        else:
+                            if starting_vertex_text.get("1.0", "end").strip() == "" and target_vertex_text.get("1.0", "end").strip() == "":
+                                line = "    Current node: " + \
+                                    str(current_node) + " - Stack: []\n"
+                                output_text.insert(tk.END, line)
+                            else:
+                                line = "    Current node: " + \
+                                    str(current_node) + "\n"
+                                output_text.insert(tk.END, line)
+
                             output_text.insert(
-                                tk.END, "--- Could not reach target node (" + str(target_node) + ")!\n")
+                                tk.END, "--- DFS traversal complete!\n")
+                            tracee = "- Visit order: "
+                            for i in range(len(trace)-1):
+                                tracee += str(trace[i]) + "->"
+                            tracee += str(trace[len(trace)-1])
+                            output_text.insert(tk.END, tracee + "\n")
+
+                            pathDFS = []
+                            traceRe = trace.copy()
+                            traceRe.reverse()
+                            pathDFS.append(traceRe[0])
+                            
+                            i = 0
+                            if undirected:
+                                while i < len(traceRe) - 1:
+                                    if traceRe[i+1] in G.neighbors(traceRe[i]):
+                                        pathDFS.append(traceRe[i+1])
+                                        i += 1
+                                    else:
+                                        del traceRe[i+1]
+                            else:
+                                while i < len(traceRe) - 1:
+                                    if traceRe[i] in G.successors(traceRe[i+1]):
+                                        pathDFS.append(traceRe[i+1])
+                                        i += 1
+                                    else:
+                                        del traceRe[i+1]
+                            pathDFS.reverse()
+                            pathh = ""
+                            for i in range(len(pathDFS)-1):
+                                pathh += str(pathDFS[i]) + "->"
+                            pathh += str(pathDFS[len(pathDFS)-1])
+                            output_text.insert(
+                                tk.END, "- Path from start vertex (" + str(start_node) + ") to target vertex (" + str(target_node) + "): " + pathh)
+
                             anim.event_source.stop()  # Stop the animation
                             running = 0
-                        else:
-                            line = "    Current node: " + \
-                                str(current_node) + " - "
-                            output_text.insert(tk.END, line)
-
-                            # Enqueue neighbors of the current node for the next iteration
-                            neighbors = sorted(list(G.neighbors(current_node)))
-                            neighbors.reverse()
-                            for neighbor in neighbors:
-                                if neighbor not in visited and neighbor not in dfs_stack:
-                                    dfs_stack.append(neighbor)
-                            stack = ""
-                            for i in range(len(dfs_stack)-1):
-                                stack += str(dfs_stack[i]) + ","
-                            stack += str(dfs_stack[len(dfs_stack)-1])
-                            line = "Stack: [" + stack + "]\n"
-                            output_text.insert(tk.END, line)
-                    # reached target_node
+                    # if not input target_node --> BFS traversy from start_node
                     else:
-                        if starting_vertex_text.get("1.0", "end").strip() == "" and target_vertex_text.get("1.0", "end").strip() == "":
-                            line = "    Current node: " + \
-                                str(current_node) + " - Stack: []\n"
-                            output_text.insert(tk.END, line)
-                        else:
-                            line = "    Current node: " + \
-                                str(current_node) + "\n"
-                            output_text.insert(tk.END, line)
+                        line = "    Current node: " + str(current_node) + " - "
+                        output_text.insert(tk.END, line)
 
-                        output_text.insert(
-                            tk.END, "--- DFS traversal complete!\n")
-                        tracee = "- Visit order: "
-                        for i in range(len(trace)-1):
-                            tracee += str(trace[i]) + "->"
-                        tracee += str(trace[len(trace)-1])
-                        output_text.insert(tk.END, tracee + "\n")
-
-                        pathDFS = []
-                        traceRe = trace.copy()
-                        traceRe.reverse()
-                        pathDFS.append(traceRe[0])
-                        
-                        i = 0
-                        if undirected:
-                            while i < len(traceRe) - 1:
-                                if traceRe[i+1] in G.neighbors(traceRe[i]):
-                                    pathDFS.append(traceRe[i+1])
-                                    i += 1
-                                else:
-                                    del traceRe[i+1]
-                        else:
-                            while i < len(traceRe) - 1:
-                                if traceRe[i] in G.successors(traceRe[i+1]):
-                                    pathDFS.append(traceRe[i+1])
-                                    i += 1
-                                else:
-                                    del traceRe[i+1]
-                        pathDFS.reverse()
-                        pathh = ""
-                        for i in range(len(pathDFS)-1):
-                            pathh += str(pathDFS[i]) + "->"
-                        pathh += str(pathDFS[len(pathDFS)-1])
-                        output_text.insert(
-                            tk.END, "- Path from start vertex (" + str(start_node) + ") to target vertex (" + str(target_node) + "): " + pathh)
-
-                        anim.event_source.stop()  # Stop the animation
-                        running = 0
-                # if not input target_node --> BFS traversy from start_node
-                else:
-                    line = "    Current node: " + str(current_node) + " - "
-                    output_text.insert(tk.END, line)
-
-                    # Enqueue neighbors of the current node for the next iteration
-                    neighbors = sorted(list(G.neighbors(current_node)))
-                    neighbors.reverse()
-                    for neighbor in neighbors:
-                        if neighbor not in visited and neighbor not in dfs_stack:
-                            dfs_stack.append(neighbor)
-                    stack = ""
-                    for i in range(len(dfs_stack)-1):
-                        stack += str(dfs_stack[i]) + ","
-                    if len(dfs_stack) == 0:
+                        # Enqueue neighbors of the current node for the next iteration
+                        neighbors = sorted(list(G.neighbors(current_node)))
+                        neighbors.reverse()
+                        for neighbor in neighbors:
+                            if neighbor not in visited and neighbor not in dfs_stack:
+                                dfs_stack.append(neighbor)
                         stack = ""
-                    else:
-                        stack += str(dfs_stack[len(dfs_stack)-1])
-                    line = "Stack: [" + stack + "]\n"
-                    output_text.insert(tk.END, line)
-            # just in case start_node == target_node
-            elif start_node != target_node:
-                # DFS traversal completed
-                output_text.insert(tk.END, "--- DFS traversal complete!\n")
-                tracee = "- Visit order: "
-                for i in range(len(trace)-1):
-                    tracee += str(trace[i]) + "->"
-                tracee += str(trace[len(trace)-1])
-                output_text.insert(tk.END, tracee + "\n")
+                        for i in range(len(dfs_stack)-1):
+                            stack += str(dfs_stack[i]) + ","
+                        if len(dfs_stack) == 0:
+                            stack = ""
+                        else:
+                            stack += str(dfs_stack[len(dfs_stack)-1])
+                        line = "Stack: [" + stack + "]\n"
+                        output_text.insert(tk.END, line)
+                # just in case start_node == target_node
+                elif start_node != target_node:
+                    # DFS traversal completed
+                    output_text.insert(tk.END, "--- DFS traversal complete!\n")
+                    tracee = "- Visit order: "
+                    for i in range(len(trace)-1):
+                        tracee += str(trace[i]) + "->"
+                    tracee += str(trace[len(trace)-1])
+                    output_text.insert(tk.END, tracee + "\n")
 
-                anim.event_source.stop()  # Stop the animation
-                running = 0
+                    anim.event_source.stop()  # Stop the animation
+                    running = 0
 
-        # Loop every 1.5 seconds to change animation
-        anim = FuncAnimation(fig, animateDFS, fargs=(
-            canvas, anim), interval=1500, cache_frame_data=False)
+            # Loop every 1.5 seconds to change animation
+            anim = FuncAnimation(fig, animateDFS, fargs=(
+                canvas, anim), interval=animTimeStep, cache_frame_data=False)
 
-        # Start the animation
-        anim._start()
-
+            # Start the animation
+            anim._start()
+    else:
+        messagebox.showinfo("Alert", "Blank Graph!")
 
 ####################     WIDGETS     #######################
 
@@ -845,6 +897,10 @@ import_graph_button.pack(pady=10)
 create_graph_button = tk.Button(
     button_frame, text="Create Graph", command=create_graph)
 create_graph_button.pack(pady=10)
+
+delete_graph_button = tk.Button(
+    button_frame, text="Delete Graph", command=delete_graph)
+delete_graph_button.pack(pady=10)
 
 # Create a frame for the starting vertex label and text
 starting_vertex_frame = tk.Frame(button_frame)
