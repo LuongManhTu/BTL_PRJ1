@@ -17,7 +17,7 @@ undirected = 1 # graph type: undirected
 running = 0 # running == 1 -> a BFS or DFS animation is running -> no interuption
 anim = None
 windowSize = "1280x770"
-animTimeStep = 1000 # animation time step
+animTimeStep = 2500 # animation time step
 
 
 ####################     FUNCTIONS     #######################
@@ -314,6 +314,10 @@ def remove_edge():
 def import_graph():
     file_path = filedialog.askopenfilename()
     if file_path:
+        if len(G.nodes):
+            global pos
+            pos = None
+            G.clear()
         with open(file_path, 'r') as file:
             content = file.read()
         input_text.delete('1.0', tk.END)
@@ -453,7 +457,7 @@ def BFS():
                 line = "    Current node: " + \
                                     str(start_node) + " - Queue: []\n"
                 output_text.insert(tk.END, line)
-                output_text.insert(tk.END, "--- BFS traversal complete!\n")
+                output_text.insert(tk.END, "--- BFS traversal completed!\n")
                 tracee = "- Visit order: " + str(start_node)
 
                 output_text.insert(tk.END, tracee + "\n")
@@ -556,7 +560,7 @@ def BFS():
                                 output_text.insert(tk.END, line)
 
                             output_text.insert(
-                                tk.END, "--- BFS traversal complete!\n")
+                                tk.END, "--- BFS traversal completed!\n")
                             tracee = "- Visit order: "
                             for i in range(len(trace)-1):
                                 tracee += str(trace[i]) + "->"
@@ -604,7 +608,7 @@ def BFS():
                         output_text.insert(tk.END, line)
                 else:
                     # BFS traversal completed
-                    output_text.insert(tk.END, "--- BFS traversal complete!\n")
+                    output_text.insert(tk.END, "--- BFS traversal completed!\n")
                     tracee = "- Visit order: "
                     for i in range(len(trace)-1):
                         tracee += str(trace[i]) + "->"
@@ -699,7 +703,7 @@ def DFS():
                 line = "    Current node: " + \
                     str(start_node) + " - Stack: []\n"
                 output_text.insert(tk.END, line)
-                output_text.insert(tk.END, "--- DFS traversal complete!\n")
+                output_text.insert(tk.END, "--- DFS traversal completed!\n")
                 tracee = "- Visit order: " + str(start_node)
 
                 output_text.insert(tk.END, tracee + "\n")
@@ -798,7 +802,7 @@ def DFS():
                                 output_text.insert(tk.END, line)
 
                             output_text.insert(
-                                tk.END, "--- DFS traversal complete!\n")
+                                tk.END, "--- DFS traversal completed!\n")
                             tracee = "- Visit order: "
                             for i in range(len(trace)-1):
                                 tracee += str(trace[i]) + "->"
@@ -861,7 +865,7 @@ def DFS():
                 # just in case start_node == target_node
                 else:
                     # DFS traversal completed
-                    output_text.insert(tk.END, "--- DFS traversal complete!\n")
+                    output_text.insert(tk.END, "--- DFS traversal completed!\n")
                     tracee = "- Visit order: "
                     for i in range(len(trace)-1):
                         tracee += str(trace[i]) + "->"
